@@ -481,10 +481,41 @@
     .cert-icon svg { stroke: var(--accent-orange); }
     .cert-info h3 { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
     .cert-info p { font-size: 13.5px; color: var(--text-secondary); margin-bottom: 8px; }
-    .cert-badges { display: flex; gap: 8px; flex-wrap: wrap; }
-    .cert-badge { font-size: 12px; padding: 3px 10px; border-radius: 20px; font-weight: 500; }
-    .cert-valid { background: rgba(63,185,80,0.1); color: #56D364; border: 1px solid rgba(63,185,80,0.2); }
-    .cert-id { background: rgba(139,148,158,0.1); color: #A0ADB8; border: 1px solid rgba(139,148,158,0.2); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+    .cert-badges { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .cert-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 12px; padding: 4px 11px; border-radius: 20px; font-weight: 500;
+    }
+    /* ── Valid state (green) ── */
+    .cert-badge-valid {
+      background: rgba(63,185,80,0.1); color: #56D364;
+      border: 1px solid rgba(63,185,80,0.25);
+    }
+    .cert-badge-valid .cert-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #3FB950; flex-shrink: 0;
+      animation: cert-pulse 2s ease-in-out infinite;
+    }
+    @keyframes cert-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.45;transform:scale(0.85)} }
+    @media (prefers-reduced-motion: reduce) { .cert-badge-valid .cert-dot { animation: none; } }
+    /* ── Expiring Soon state (orange) ── */
+    .cert-badge-expiring {
+      background: rgba(240,136,62,0.1); color: #E09142;
+      border: 1px solid rgba(240,136,62,0.25);
+    }
+    .cert-badge-expiring svg { flex-shrink: 0; }
+    /* ── Expired state (muted gray) ── */
+    .cert-badge-expired {
+      background: rgba(110,118,129,0.1); color: #8B949E;
+      border: 1px solid rgba(110,118,129,0.25);
+    }
+    .cert-badge-expired svg { flex-shrink: 0; }
+    /* ── Cert ID badge (unchanged) ── */
+    .cert-id {
+      background: rgba(139,148,158,0.1); color: #A0ADB8;
+      border: 1px solid rgba(139,148,158,0.2);
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    }
 
     /* ─── EDUCATION ──────────────────────────────────────── */
     .edu-grid { display: flex; flex-direction: column; gap: 16px; max-width: 760px; }
@@ -1091,7 +1122,7 @@
           <h3>AWS Certified Cloud Practitioner</h3>
           <p>Foundational level — Amazon Web Services · Issued Aug 2023</p>
           <div class="cert-badges">
-            <span class="cert-badge cert-valid">Valid until Aug 2026</span>
+            <span class="cert-badge cert-id" id="certStatusBadge">Valid until Aug 2026</span>
             <span class="cert-badge cert-id">Q8WJVL7CWJ41Q5G8</span>
           </div>
         </div>
@@ -1361,6 +1392,33 @@
       progressBar.style.width = ((scrollTop / scrollHeight) * 100) + '%';
       scrollTopBtn.classList.toggle('visible', scrollTop > 400);
     }, { passive: true });
+
+    // ── Smart cert expiry badge ───────────────────────────────
+    (function() {
+      const badge   = document.getElementById('certStatusBadge');
+      if (!badge) return;
+      const expiry  = new Date('2026-08-01');
+      const now     = new Date();
+      const msDay   = 1000 * 60 * 60 * 24;
+      const daysLeft = Math.ceil((expiry - now) / msDay);
+
+      if (daysLeft > 60) {
+        // Valid — green + pulsing dot
+        badge.className = 'cert-badge cert-badge-valid';
+        badge.innerHTML = '<span class="cert-dot" aria-hidden="true"></span>Valid until Aug 2026';
+        badge.setAttribute('title', daysLeft + ' days remaining');
+      } else if (daysLeft > 0) {
+        // Expiring soon — orange + warning icon
+        badge.className = 'cert-badge cert-badge-expiring';
+        badge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Renewing soon · Aug 2026`;
+        badge.setAttribute('title', daysLeft + ' days remaining');
+      } else {
+        // Expired — gray + clock/x icon
+        badge.className = 'cert-badge cert-badge-expired';
+        badge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>Expired · Aug 2026`;
+        badge.removeAttribute('title');
+      }
+    })();
 
     // ── Active nav on scroll ──────────────────────────────────
     const sections = document.querySelectorAll('section[id]');
